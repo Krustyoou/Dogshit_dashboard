@@ -1,0 +1,184 @@
+/*-- scss:defaults --*/
+
+$body-bg: #eaedef;
+$body-color: #0F172A;
+$font-family-sans-serif: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+
+/*-- scss:rules --*/
+
+/*
+Dashboard Header 
+*/
+
+body.quarto-dashboard #quarto-dashboard-header .navbar {
+  background-color: #0F172A !important;
+  padding: 0.50rem 1rem !important;
+}
+
+body.quarto-dashboard #quarto-dashboard-header .navbar-nav {
+  display: flex;
+  gap: 0.9rem;
+}
+
+body.quarto-dashboard #quarto-dashboard-header .navbar .navbar-title-text {
+  font-weight: 700 !important;
+  color: #f2f4f6 !important;
+}
+
+body.quarto-dashboard #quarto-dashboard-header .navbar .nav-link {
+  background-color: #0F172A;
+  border-radius: 1.5rem !important;
+  border: none !important;
+}
+
+body.quarto-dashboard #quarto-dashboard-header .navbar .nav-link-text {
+  color: #f2f4f6 !important;
+}
+
+body.quarto-dashboard #quarto-dashboard-header .navbar .nav-link:hover {
+  background-color: #172033;
+  border-radius: 1.5rem !important;
+  border: none !important;
+}
+
+body.quarto-dashboard #quarto-dashboard-header .navbar .nav-link.active {
+  background-color: #1E293B;
+  border-radius: 1.5rem !important;
+  border: none !important;
+}
+
+/* 
+Full-Color KPI Value Boxes 
+*/
+
+body.quarto-dashboard .card.valuebox,
+body.quarto-dashboard .bslib-value-box {
+  border-radius: 0.55rem !important;
+  border: none !important;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.1) !important;
+  overflow: hidden !important;
+}
+
+body.quarto-dashboard .card.valuebox .card-body,
+body.quarto-dashboard .bslib-value-box .card-body,
+body.quarto-dashboard .bslib-value-box .value-box-grid {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/*
+Designated Full-Card Colors for the 4 KPIs
+*/
+
+body.quarto-dashboard .bslib-grid > .card.valuebox:nth-child(1) {
+  background-color: #1E293B !important;
+}
+
+body.quarto-dashboard .bslib-grid > .card.valuebox:nth-child(2) {
+  background-color: #1E40AF !important; 
+}
+
+body.quarto-dashboard .bslib-grid > .card.valuebox:nth-child(3) {
+  background-color: #0D9488 !important; 
+}
+
+body.quarto-dashboard .bslib-grid > .card.valuebox:nth-child(4) {
+  background-color: #D97706 !important; 
+}
+
+/*
+KPI Icon & Text Sizing (Stretched Horizontal Layout)
+*/
+
+body.quarto-dashboard .bslib-value-box .value-box-grid {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 0.8rem !important;
+  padding: 0.65rem 1.15rem !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+body.quarto-dashboard .bslib-value-box .value-box-showcase {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  max-width: 44px !important;
+  max-height: 44px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  flex-shrink: 0 !important;
+  border-radius: 0.5rem !important;
+  background-color: rgba(255, 255, 255, 0.18) !important;
+  color: #FFFFFF !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+body.quarto-dashboard .bslib-value-box .value-box-showcase .bi {
+  font-size: 1.25rem !important;
+  height: auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+}
+
+body.quarto-dashboard .bslib-value-box .value-box-showcase .bi::before {
+  vertical-align: 0 !important;
+}
+
+body.quarto-dashboard .bslib-value-box .value-box-area {
+  padding: 0 !important;
+  margin: 0 !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  text-align: left !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: flex-start !important;
+}
+
+body.quarto-dashboard .bslib-value-box .value-box-title {
+  font-size: 0.70rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  color: rgba(253, 250, 250, 0.88) !important;
+  margin-bottom: 0.15rem !important;
+  width: 100% !important;
+  text-align: left !important;
+}
+
+body.quarto-dashboard .bslib-value-box .value-box-value {
+  font-size: 1.15rem !important;
+  font-weight: 700 !important;
+  color: #FFFFFF !important;
+  line-height: 1.2 !important;
+  width: 100% !important;
+  text-align: left !important;
+}
+
+/*
+Chart & Interpretation Cards
+*/
+
+body.quarto-dashboard .card:not(.valuebox) {
+  background-color: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
+  border-radius: 0.55rem !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+}
+
+body.quarto-dashboard .card .card-header {
+  background-color: #F8FAFC !important;
+  border-bottom: 1px solid #E2E8F0 !important;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+  color: #334155 !important;
+  padding: 0.5rem 1rem !important;
+}

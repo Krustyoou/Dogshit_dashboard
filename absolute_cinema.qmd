@@ -1,0 +1,733 @@
+---
+title: "Palmer Penguin Observations"
+format:
+  dashboard:
+    orientation: rows
+    scrolling: false
+    theme:
+      - cosmo
+      - lolol.scss
+      - lolol2.scss
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+library(ggplot2)
+library(dplyr)
+library(scales)
+library(palmerpenguins)
+
+# Remove records missing the fields used in the dashboard.
+penguins_clean <- penguins |>
+  filter(!is.na(species), !is.na(island))
+
+# Overall totals and the average share per species.
+total_penguins <- nrow(penguins_clean)
+total_species <- n_distinct(penguins_clean$species)
+equal_share <- round(total_penguins / total_species, 1)
+
+# Number of observations for each species.
+species_summary <- penguins_clean |>
+  count(species, name = "observations") |>
+  arrange(desc(observations)) |>
+  mutate(
+    share = observations / sum(observations),
+    label = paste0(
+      comma(observations), " (",
+      percent(share, accuracy = 0.1), ")"
+    )
+  )
+
+# Total observations recorded on each island.
+island_summary <- penguins_clean |>
+  count(island, name = "observations") |>
+  arrange(desc(observations)) |>
+  mutate(
+    share = observations / sum(observations),
+    label = paste0(
+      comma(observations), " (",
+      percent(share, accuracy = 0.1), ")"
+    )
+  )
+
+# Species composition within each island.
+island_species <- penguins_clean |>
+  count(island, species, name = "observations") |>
+  left_join(
+    island_summary |>
+      select(island, island_total = observations),
+    by = "island"
+  ) |>
+  mutate(
+    share = observations / island_total,
+    label = paste0(
+      comma(observations), " (",
+      percent(share, accuracy = 0.1), ")"
+    ),
+    island = factor(island, levels = rev(island_summary$island)),
+    species = factor(species, levels = rev(species_summary$species))
+  )
+
+# Identify species observed on only one island.
+exclusive_species <- penguins_clean |>
+  distinct(species, island) |>
+  count(species, name = "island_count") |>
+  filter(island_count == 1) |>
+  pull(species)
+
+n_exclusive_species <- length(exclusive_species)
+
+# Species rank variables for KPIs and Finding 1.
+top_species_name          <- as.character(species_summary$species[1])
+top_species_count         <- species_summary$observations[1]
+top_species_share         <- species_summary$share[1]
+top_species_percentage    <- percent(top_species_share, accuracy = 0.1)
+
+second_species_name       <- as.character(species_summary$species[2])
+second_species_count      <- species_summary$observations[2]
+second_species_percentage <- percent(species_summary$share[2], accuracy = 0.1)
+
+third_species_name        <- as.character(species_summary$species[3])
+third_species_count       <- species_summary$observations[3]
+third_species_percentage  <- percent(species_summary$share[3], accuracy = 0.1)
+
+species_top_second_diff   <- top_species_count - second_species_count
+
+# Island rank variables for KPIs and Finding 2.
+top_island_name           <- as.character(island_summary$island[1])
+top_island_count          <- island_summary$observations[1]
+top_island_share          <- island_summary$share[1]
+top_island_percentage     <- percent(top_island_share, accuracy = 0.1)
+
+second_island_name        <- as.character(island_summary$island[2])
+second_island_count       <- island_summary$observations[2]
+second_island_percentage  <- percent(island_summary$share[2], accuracy = 0.1)
+
+third_island_name         <- as.character(island_summary$island[3])
+third_island_count        <- island_summary$observations[3]
+third_island_percentage   <- percent(island_summary$share[3], accuracy = 0.1)
+
+top_two_island_count      <- top_island_count + second_island_count
+top_two_island_percentage <- percent(top_two_island_count / total_penguins, accuracy = 0.1)
+
+# Helper function to render the finding cards in Row 3.
+plot_finding_card <- function(eyebrow_text, body_text, accent_color, wrap_width = 100) {
+  wrapped_body <- paste(strwrap(body_text, width = wrap_width), collapse = "\n")
+
+  ggplot() +
+    annotate(
+      "segment",
+      x = 0, xend = 0, y = 0.08, yend = 0.92,
+      color = accent_color, linewidth = 2.2
+    ) +
+    annotate(
+      "text",
+      x = 0.018, y = 0.84,
+      label = toupper(eyebrow_text),
+      hjust = 0, vjust = 1,
+      size = 3.3, fontface = "bold", color = accent_color
+    ) +
+    annotate(
+      "text",
+      x = 0.018, y = 0.58,
+      label = wrapped_body,
+      hjust = 0, vjust = 1,
+      size = 3.4, lineheight = 1.28, color = "#1E293B"
+    ) +
+    scale_x_continuous(limits = c(0, 1), expand = expansion(mult = c(0.005, 0.01))) +
+    scale_y_continuous(limits = c(0, 1), expand = expansion(mult = c(0, 0))) +
+    theme_void() +
+    theme(
+      plot.background = element_rect(fill = "#FFFFFF", color = NA),
+      plot.margin = margin(4, 8, 4, 8)
+    )
+}
+
+# Consistent colors across the visualizations.
+species_colors <- c(
+  "Adelie" = "#1E40AF",
+  "Gentoo" = "#0D9488",
+  "Chinstrap" = "#D97706"
+)
+```
+
+# Dashboard
+
+## Row {height=16%}
+
+```{r}
+#| label: kpi-total
+#| content: valuebox
+#| title: "Total Observations"
+
+list(
+  icon = "clipboard-data",
+  value = paste0(comma(total_penguins), " Penguins")
+)
+```
+
+```{r}
+#| label: kpi-species
+#| content: valuebox
+#| title: "Most Observed Species"
+
+list(
+  icon = "award",
+  value = paste0(
+    top_species_name, " • ",
+    top_species_count, " (",
+    percent(top_species_share, accuracy = 0.1), ")"
+  )
+)
+```
+
+```{r}
+#| label: kpi-island
+#| content: valuebox
+#| title: "Island with Most Observations"
+
+list(
+  icon = "geo-alt",
+  value = paste0(
+    top_island_name, " • ",
+    top_island_count, " (",
+    percent(top_island_share, accuracy = 0.1), ")"
+  )
+)
+```
+
+```{r}
+#| label: kpi-exclusivity
+#| content: valuebox
+#| title: "Single-Island Species"
+
+list(
+  icon = "compass",
+  value = paste0(
+    n_exclusive_species, " of ", total_species,
+    " (", paste(exclusive_species, collapse = ", "), ")"
+  )
+)
+```
+
+## Row {height=60%}
+
+### Column {width=50%}
+
+```{r}
+#| label: species-chart
+#| title: "Penguin Species Distribution"
+#| expandable: false
+#| fig-width: 7.0
+#| fig-height: 4.0
+#| fig-dpi: 300
+
+ggplot(
+  species_summary,
+  aes(
+    x = observations,
+    y = reorder(species, observations),
+    fill = species
+  )
+) +
+  geom_vline(
+    xintercept = equal_share,
+    linetype = "dashed",
+    color = "#64748B",
+    linewidth = 0.6
+  ) +
+  geom_col(width = 0.55, show.legend = FALSE) +
+  geom_text(
+    aes(label = label),
+    hjust = -0.08,
+    size = 3.5,
+    fontface = "bold",
+    color = "#0F172A"
+  ) +
+  annotate(
+    "text",
+    x = equal_share,
+    y = total_species + 0.45,
+    label = paste0("Equal Share: ", equal_share),
+    size = 3.1,
+    fontface = "bold",
+    color = "#475569"
+  ) +
+  scale_fill_manual(values = species_colors) +
+  scale_x_continuous(
+    expand = expansion(mult = c(0, 0.30))
+  ) +
+  labs(
+    title = paste0(
+      top_species_name,
+      " Has the Highest Number of Observations"
+    ),
+    subtitle = "Total observations by species, compared with an equal share",
+    x = "Number of Observations",
+    y = "Penguin Species"
+  ) +
+  theme_minimal(base_size = 11.5) +
+  theme(
+    plot.title = element_text(
+      face = "bold",
+      color = "#0F172A"
+    ),
+    plot.subtitle = element_text(
+      color = "#64748B",
+      margin = margin(b = 10)
+    ),
+    plot.title.position = "plot",
+    axis.title = element_text(
+      face = "bold",
+      color = "#334155"
+    ),
+    axis.text.y = element_text(
+      face = "bold",
+      color = "#0F172A",
+      size = 10.5
+    ),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+```
+
+### Column {width=50%}
+
+```{r}
+#| label: island-chart
+#| title: "Penguin Distribution Across Islands"
+#| expandable: false
+#| fig-width: 7.5
+#| fig-height: 4.0
+#| fig-dpi: 300
+
+ggplot(
+  island_species,
+  aes(
+    x = observations,
+    y = island,
+    fill = species
+  )
+) +
+  geom_col(
+    position = position_stack(reverse = TRUE),
+    width = 0.55,
+    color = "#FFFFFF",
+    linewidth = 0.6
+  ) +
+  geom_text(
+    aes(label = label),
+    position = position_stack(
+      vjust = 0.5,
+      reverse = TRUE
+    ),
+    size = 3.2,
+    fontface = "bold",
+    color = "#FFFFFF"
+  ) +
+  geom_text(
+    data = island_summary,
+    aes(
+      x = observations,
+      y = reorder(island, observations),
+      label = label
+    ),
+    inherit.aes = FALSE,
+    hjust = -0.08,
+    size = 3.4,
+    fontface = "bold",
+    color = "#0F172A"
+  ) +
+  scale_fill_manual(
+    values = species_colors,
+    name = "Species:"
+  ) +
+  scale_x_continuous(
+    expand = expansion(mult = c(0, 0.28))
+  ) +
+  labs(
+    title = paste0(
+      top_island_name,
+      " Records the Most Penguins (",
+      percent(top_island_share, accuracy = 0.1),
+      ")"
+    ),
+    subtitle = "Observations per island broken down by penguin species",
+    x = "Number of Observations",
+    y = "Island"
+  ) +
+  theme_minimal(base_size = 11.5) +
+  theme(
+    plot.title = element_text(
+      face = "bold",
+      color = "#0F172A"
+    ),
+    plot.subtitle = element_text(
+      color = "#64748B",
+      margin = margin(b = 8)
+    ),
+    plot.title.position = "plot",
+    axis.title = element_text(
+      face = "bold",
+      color = "#334155"
+    ),
+    axis.text.y = element_text(
+      face = "bold",
+      color = "#0F172A",
+      size = 10.5
+    ),
+    legend.position = "top",
+    legend.justification = "left",
+    legend.title = element_text(face = "bold"),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+```
+
+## Row {height=22%}
+### Column {width=51%}
+```{r}
+#| label: finding-species
+#| padding: 0px
+#| expandable: false
+#| fig-width: 8.2
+#| fig-height: 1.25
+#| fig-dpi: 300
+finding_1_text <- sprintf(
+  "%s ranks higher in the top with %s records (%s), exceeding the average penguins count (equal-share) (%.1f) and surpassing %s (%s, %s) by %s. %s (%s, %s) is less than half the count of %s.",
+  top_species_name, comma(top_species_count), top_species_percentage,
+  equal_share,
+  second_species_name, comma(second_species_count), second_species_percentage,
+  comma(species_top_second_diff),
+  third_species_name, comma(third_species_count), third_species_percentage,
+  top_species_name
+)
+plot_finding_card(
+  eyebrow_text = "Finding 1 • Species Ranking",
+  body_text    = finding_1_text,
+  accent_color = "#1E40AF",
+  wrap_width   = 100
+)
+```
+### Column {width=52%}
+```{r}
+#| label: finding-island
+#| padding: 0px
+#| expandable: false
+#| fig-width: 8.8
+#| fig-height: 1.25
+#| fig-dpi: 300
+finding_2_text <- sprintf(
+  "%s is the island with most observations with %s penguins (%s), next of it would be %s (%s, %s) and %s (%s, %s). Together, %s and %s host %s (%s of %s) of all observed penguins.",
+  top_island_name, comma(top_island_count), top_island_percentage,
+  second_island_name, comma(second_island_count), second_island_percentage,
+  third_island_name, comma(third_island_count), third_island_percentage,
+  top_island_name, second_island_name,
+  top_two_island_percentage, comma(top_two_island_count), comma(total_penguins)
+)
+plot_finding_card(
+  eyebrow_text = "Finding 2 • Island Totals",
+  body_text    = finding_2_text,
+  accent_color = "#0D9488",
+  wrap_width   = 105
+)
+```
+
+
+# Deep Analysis {scrolling="true"}
+
+```{r}
+#| label: stats-prep
+#| include: false
+
+# drop the 2 rows missing body measurements
+peng_num <- penguins_clean |>
+  filter(
+    !is.na(body_mass_g),
+    !is.na(flipper_length_mm),
+    !is.na(bill_length_mm),
+    !is.na(bill_depth_mm)
+  )
+
+avg_mass <- round(mean(peng_num$body_mass_g))
+sd_mass <- round(sd(peng_num$body_mass_g))
+
+# species summary stats
+sp_stats <- peng_num |>
+  group_by(species) |>
+  summarise(
+    n = n(),
+    mean_mass = mean(body_mass_g),
+    sd_mass = sd(body_mass_g),
+    med_mass = median(body_mass_g),
+    iqr_mass = IQR(body_mass_g),
+    min_mass = min(body_mass_g),
+    max_mass = max(body_mass_g),
+    mean_flip = mean(flipper_length_mm),
+    sd_flip = sd(flipper_length_mm),
+    mean_blen = mean(bill_length_mm),
+    sd_blen = sd(bill_length_mm),
+    mean_bdep = mean(bill_depth_mm),
+    sd_bdep = sd(bill_depth_mm),
+    .groups = "drop"
+  ) |>
+  arrange(desc(mean_mass))
+
+# order boxplot x-axis from lightest to heaviest
+mass_order <- rev(as.character(sp_stats$species))
+peng_num <- peng_num |>
+  mutate(sp_ord = factor(species, levels = mass_order))
+sp_stats <- sp_stats |>
+  mutate(
+    sp_ord = factor(species, levels = mass_order),
+    mean_lbl = paste0("Avg: ", comma(round(mean_mass)), " g")
+  )
+
+all_row <- peng_num |>
+  summarise(
+    Species = "Overall",
+    n = n(),
+    mean_mass = mean(body_mass_g),
+    sd_mass = sd(body_mass_g),
+    med_mass = median(body_mass_g),
+    iqr_mass = IQR(body_mass_g),
+    min_mass = min(body_mass_g),
+    max_mass = max(body_mass_g),
+    mean_flip = mean(flipper_length_mm),
+    sd_flip = sd(flipper_length_mm),
+    mean_blen = mean(bill_length_mm),
+    sd_blen = sd(bill_length_mm),
+    mean_bdep = mean(bill_depth_mm),
+    sd_bdep = sd(bill_depth_mm)
+  )
+
+desc_tbl <- sp_stats |>
+  mutate(Species = as.character(species)) |>
+  select(-species, -sp_ord, -mean_lbl) |>
+  bind_rows(all_row) |>
+  mutate(
+    n = comma(n),
+    `Mass Mean ± SD (g)` = paste0(comma(round(mean_mass)), " ± ", comma(round(sd_mass))),
+    `Mass Median (IQR)` = paste0(comma(round(med_mass)), " (", comma(round(iqr_mass)), ")"),
+    `Mass Range (g)` = paste0(comma(round(min_mass)), "–", comma(round(max_mass))),
+    `Flipper Mean ± SD (mm)` = paste0(number(mean_flip, accuracy = 0.1), " ± ", number(sd_flip, accuracy = 0.1)),
+    `Bill Len Mean ± SD (mm)` = paste0(number(mean_blen, accuracy = 0.1), " ± ", number(sd_blen, accuracy = 0.1)),
+    `Bill Dep Mean ± SD (mm)` = paste0(number(mean_bdep, accuracy = 0.1), " ± ", number(sd_bdep, accuracy = 0.1))
+  ) |>
+  select(
+    Species, n,
+    `Mass Mean ± SD (g)`, `Mass Median (IQR)`, `Mass Range (g)`,
+    `Flipper Mean ± SD (mm)`, `Bill Len Mean ± SD (mm)`, `Bill Dep Mean ± SD (mm)`
+  )
+
+# chi-square, anova, correlation + linear fit
+chi <- chisq.test(table(penguins_clean$species, penguins_clean$island))
+chi_val <- round(unname(chi$statistic), 1)
+chi_df <- unname(chi$parameter)
+chi_p_txt <- ifelse(chi$p.value < 0.001, "p < 0.001", paste0("p = ", round(chi$p.value, 3)))
+
+fit_aov <- aov(body_mass_g ~ species, data = peng_num)
+aov_res <- summary(fit_aov)[[1]]
+f_val <- round(aov_res$`F value`[1], 1)
+df1 <- aov_res$Df[1]
+df2 <- aov_res$Df[2]
+aov_p <- aov_res$`Pr(>F)`[1]
+aov_p_txt <- ifelse(aov_p < 0.001, "p < 0.001", paste0("p = ", round(aov_p, 3)))
+
+cor_res <- cor.test(peng_num$flipper_length_mm, peng_num$body_mass_g)
+r_val <- round(unname(cor_res$estimate), 2)
+r2_pct <- percent(unname(cor_res$estimate)^2, accuracy = 0.1)
+cor_p_txt <- ifelse(cor_res$p.value < 0.001, "p < 0.001", paste0("p = ", round(cor_res$p.value, 3)))
+
+fit_lm <- lm(body_mass_g ~ flipper_length_mm, data = peng_num)
+slope <- round(unname(coef(fit_lm)[2]), 1)
+
+test_tbl <- data.frame(
+  Test = c("Chi-Square", "One-Way ANOVA", "Pearson r & Linear Fit"),
+  Variables = c("Species vs. Island", "Body Mass by Species", "Flipper Length vs. Mass"),
+  Statistic = c(
+    paste0("χ² = ", chi_val, " (df = ", chi_df, ")"),
+    paste0("F = ", f_val, " (df = ", df1, ", ", df2, ")"),
+    paste0("r = ", r_val, " (R² = ", r2_pct, ")")
+  ),
+  `p-value` = c(chi_p_txt, aov_p_txt, cor_p_txt),
+  Result = c(
+    ifelse(chi$p.value < 0.05, "Significant", "Not significant"),
+    ifelse(aov_p < 0.05, "Significant", "Not significant"),
+    ifelse(cor_res$p.value < 0.05, "Significant", "Not significant")
+  ),
+  check.names = FALSE
+)
+```
+
+## Row {height="115px"}
+
+```{r}
+#| label: box-mass
+#| content: valuebox
+#| title: "Mean Body Mass"
+
+list(
+  icon = "speedometer2",
+  value = paste0(comma(avg_mass), " g (± ", comma(sd_mass), " g)")
+)
+```
+
+```{r}
+#| label: box-chi
+#| content: valuebox
+#| title: "Species × Island (χ²)"
+
+list(
+  icon = "grid-3x3-gap",
+  value = paste0("χ² = ", chi_val, " • ", chi_p_txt)
+)
+```
+
+```{r}
+#| label: box-anova
+#| content: valuebox
+#| title: "Mass by Species (ANOVA)"
+
+list(
+  icon = "bar-chart-line",
+  value = paste0("F = ", f_val, " • ", aov_p_txt)
+)
+```
+
+```{r}
+#| label: box-cor
+#| content: valuebox
+#| title: "Flipper vs. Mass (r)"
+
+list(
+  icon = "graph-up-arrow",
+  value = paste0("r = ", r_val, " • ", cor_p_txt)
+)
+```
+
+## Row {height="440px"}
+
+### Column {width=50%}
+
+```{r}
+#| label: plot-mass
+#| title: "Body Mass by Species"
+#| expandable: false
+#| fig-width: 7.2
+#| fig-height: 4.3
+#| fig-dpi: 300
+
+ggplot(peng_num, aes(x = sp_ord, y = body_mass_g, fill = species)) +
+  geom_hline(yintercept = avg_mass, linetype = "dashed", color = "#64748B", linewidth = 0.6) +
+  geom_boxplot(width = 0.52, alpha = 0.78, color = "#0F172A", outlier.color = "#475569", show.legend = FALSE) +
+  geom_point(
+    data = sp_stats,
+    aes(x = sp_ord, y = mean_mass),
+    inherit.aes = FALSE,
+    shape = 23, size = 3.2, fill = "#FFFFFF", color = "#0F172A", stroke = 1.1
+  ) +
+  geom_text(
+    data = sp_stats,
+    aes(x = sp_ord, y = max_mass + 220, label = mean_lbl),
+    inherit.aes = FALSE,
+    size = 3.3, fontface = "bold", color = "#0F172A"
+  ) +
+  scale_fill_manual(values = species_colors) +
+  scale_y_continuous(labels = comma, expand = expansion(mult = c(0.05, 0.14))) +
+  labs(
+    title = paste0(sp_stats$species[1], " Penguins Weigh the Most"),
+    subtitle = paste0(
+      "Overall avg: ", comma(avg_mass), " g (dashed) | ANOVA F(",
+      df1, ", ", df2, ") = ", f_val, ", ", aov_p_txt
+    ),
+    x = "Species",
+    y = "Body Mass (g)",
+    caption = "Diamonds = mean (average)"
+  ) +
+  theme_minimal(base_size = 11.5) +
+  theme(
+    plot.title = element_text(face = "bold", color = "#0F172A"),
+    plot.subtitle = element_text(color = "#64748B", size = 9.5, margin = margin(b = 10)),
+    plot.caption = element_text(color = "#64748B", size = 8.5, hjust = 0),
+    plot.title.position = "plot",
+    axis.title = element_text(face = "bold", color = "#334155"),
+    axis.text.x = element_text(face = "bold", color = "#0F172A", size = 10.5),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+```
+
+### Column {width=50%}
+
+```{r}
+#| label: plot-flipper
+#| title: "Flipper Length vs. Body Mass"
+#| expandable: false
+#| fig-width: 7.2
+#| fig-height: 4.3
+#| fig-dpi: 300
+
+ggplot(peng_num, aes(x = flipper_length_mm, y = body_mass_g, color = species)) +
+  geom_point(alpha = 0.72, size = 2.2) +
+  geom_smooth(
+    aes(x = flipper_length_mm, y = body_mass_g),
+    inherit.aes = FALSE,
+    method = "lm", formula = y ~ x, se = TRUE,
+    color = "#0F172A", fill = "#CBD5E1", linewidth = 0.9
+  ) +
+  scale_color_manual(values = species_colors, name = "Species:") +
+  scale_y_continuous(labels = comma) +
+  labs(
+    title = "Penguins with Longer Flippers Tend to Weigh More",
+    subtitle = paste0("r = ", r_val, ", R² = ", r2_pct, ", ", cor_p_txt, " | about +", slope, " g per mm"),
+    x = "Flipper Length (mm)",
+    y = "Body Mass (g)",
+    #caption = "Line shows the overall linear fit with a 95% confidence band."
+  ) +
+  theme_minimal(base_size = 11.5) +
+  theme(
+    plot.title = element_text(face = "bold", color = "#0F172A"),
+    plot.subtitle = element_text(color = "#64748B", size = 9.5, margin = margin(b = 8)),
+    plot.caption = element_text(color = "#64748B", size = 8.5, hjust = 0),
+    plot.title.position = "plot",
+    axis.title = element_text(face = "bold", color = "#334155"),
+    legend.position = "top",
+    legend.justification = "left",
+    legend.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+```
+
+## Row
+
+```{r}
+#| label: tbl-desc
+#| title: "Summary Stats by each Species"
+#| expandable: false
+
+knitr::kable(desc_tbl, align = c("l", "r", "r", "r", "r", "r", "r", "r"))
+```
+
+## Row
+
+### Column {width=54%}
+
+```{r}
+#| label: tbl-tests
+#| title: "Statistical Tests"
+#| expandable: false
+
+knitr::kable(test_tbl, align = c("l", "l", "l", "l", "l"))
+```
+
+### Column {width=46%}
+
+::: {.card title="Interpretations" fill="false"}
+- **Species and islands (Chi-Square):** Species and issland aren't independent across the `r comma(total_penguins)` penguins (χ² = `r chi_val`, df = `r chi_df`, `r chi_p_txt`). This almost tells us that where a penguin lives is where the same species lives.
+- **Body mass across species (One-Way ANOVA):** Average weight differs significantly across the `r comma(nrow(peng_num))` measured penguins (F(`r df1`, `r df2`) = `r f_val`, `r aov_p_txt`). `r sp_stats$species[1]` is the heaviest (avg `r comma(round(sp_stats$mean_mass[1]))` g), while `r sp_stats$species[2]` (`r comma(round(sp_stats$mean_mass[2]))` g) and `r sp_stats$species[3]` (`r comma(round(sp_stats$mean_mass[3]))` g) are not that far in weight.
+- **Flipper length and body mass (Correlation & Regression):** Flipper length and body mass have a strong positive correlation (r = `r r_val`, `r cor_p_txt`), that explains `r r2_pct` of the variation in body mass. Based on the linear regression, each 1 mm of flipper length adds `r slope` g of body mass.
+:::
+
